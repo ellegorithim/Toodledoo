@@ -88,6 +88,12 @@ input[type="color"] {
 .view { display: none; }
 .view.active { display: block; }
 
+/* Stack multiple cards in a view with breathing room */
+.view.active > .card + .card,
+#view-challenges.active > .card + .card {
+  margin-top: 16px;
+}
+
 .hidden { display: none !important; }
 
 /* ===== WAVY BANNER ===== */
