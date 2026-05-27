@@ -1,0 +1,19 @@
+{
+  "name": "Tracker",
+  "short_name": "Tracker",
+  "description": "Track activities, goals, streaks, and friendly monthly challenges.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff7fb",
+  "theme_color": "#ff6fa3",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
