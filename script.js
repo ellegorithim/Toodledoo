@@ -1,5 +1,5 @@
 /* ============================================================
-   Tracker App - Frontend MVP with Badges + Local Challenges
+   Toodledoo - Frontend MVP with Badges + Local Challenges
    Storage: localStorage under STORAGE_KEY
 ============================================================ */
 
@@ -19,15 +19,15 @@ const BADGES = [
   { id: 'goal-x5',       emoji: '⭐',  name: 'High Five',      desc: 'Hit any goal 5 times' },
   { id: 'goal-x25',      emoji: '🌟', name: 'Consistent',     desc: 'Hit any goal 25 times' },
   { id: 'goal-x100',     emoji: '💫', name: 'Centurion',      desc: 'Hit any goal 100 times' },
-  { id: 'streak-3',      emoji: '🔥', name: '3-Day Streak',   desc: '3 days in a row on one tracker' },
-  { id: 'streak-7',      emoji: '🔥', name: 'Week Warrior',   desc: '7-day streak on one tracker' },
-  { id: 'streak-30',     emoji: '🏆', name: 'Monthly Master', desc: '30-day streak on one tracker' },
-  { id: 'variety-3',     emoji: '🎨', name: 'Multi-tasker',   desc: 'Have 3 active trackers' },
-  { id: 'variety-5',     emoji: '🎭', name: 'Renaissance',    desc: 'Have 5 active trackers' },
+  { id: 'streak-3',      emoji: '🔥', name: '3-Day Streak',   desc: '3 days in a row on one goal' },
+  { id: 'streak-7',      emoji: '🔥', name: 'Week Warrior',   desc: '7-day streak on one goal' },
+  { id: 'streak-30',     emoji: '🏆', name: 'Monthly Master', desc: '30-day streak on one goal' },
+  { id: 'variety-3',     emoji: '🎨', name: 'Multi-tasker',   desc: 'Have 3 active goals' },
+  { id: 'variety-5',     emoji: '🎭', name: 'Renaissance',    desc: 'Have 5 active goals' },
   { id: 'early-bird',    emoji: '🌅', name: 'Early Bird',     desc: 'Log before 8 AM' },
   { id: 'night-owl',     emoji: '🦉', name: 'Night Owl',      desc: 'Log after 10 PM' },
   { id: 'overachiever',  emoji: '🚀', name: 'Overachiever',   desc: 'Log 2× your daily goal' },
-  { id: 'perfect-day',   emoji: '✨', name: 'Perfect Day',    desc: 'Hit every goal in one day (3+ trackers)' },
+  { id: 'perfect-day',   emoji: '✨', name: 'Perfect Day',    desc: 'Hit every goal in one day (3+ goals)' },
   { id: 'challenger',    emoji: '⚔️', name: 'Challenger',     desc: 'Create your first challenge' },
   { id: 'champion',      emoji: '👑', name: 'Champion',       desc: 'Finish a challenge in 1st place' },
 ];
@@ -148,7 +148,7 @@ function renderTrackers() {
   const hit = state.trackers.filter((t) => todayProgress(t) >= t.goal).length;
   const summary = document.getElementById('banner-summary');
   if (totalGoals === 0) {
-    summary.textContent = 'Add a tracker to start logging your progress.';
+    summary.textContent = 'Add a goal to start logging your progress.';
   } else {
     summary.textContent = `${hit} of ${totalGoals} goal${totalGoals === 1 ? '' : 's'} hit today.`;
   }
@@ -205,7 +205,7 @@ function escapeHtml(s) {
 // ---------- Form ----------
 function openAddForm() {
   editingId = null;
-  document.getElementById('form-title').textContent = 'New Tracker';
+  document.getElementById('form-title').textContent = 'New Goal';
   document.getElementById('tracker-id').value = '';
   document.getElementById('t-name').value = '';
   document.getElementById('t-unit').value = '';
@@ -220,7 +220,7 @@ function openEditForm(id) {
   const t = state.trackers.find((x) => x.id === id);
   if (!t) return;
   editingId = id;
-  document.getElementById('form-title').textContent = 'Edit Tracker';
+  document.getElementById('form-title').textContent = 'Edit Goal';
   document.getElementById('tracker-id').value = id;
   document.getElementById('t-name').value = t.name;
   document.getElementById('t-unit').value = t.unit;
@@ -1091,7 +1091,7 @@ function bindSettings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tracker-data-${todayKey()}.json`;
+    a.download = `toodledoo-data-${todayKey()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -1,7 +1,7 @@
 {
-  "name": "Tracker",
-  "short_name": "Tracker",
-  "description": "Track activities, goals, streaks, and friendly monthly challenges.",
+  "name": "Toodledoo",
+  "short_name": "Toodledoo",
+  "description": "Toodledoo is a goal-tracking app that makes your to-do list feel less like a chore. Set daily goals, log your progress, earn badges, and take on challenges.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

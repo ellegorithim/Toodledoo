@@ -1,7 +1,7 @@
-// Service worker for Tracker PWA
+// Service worker for Toodledoo PWA
 // Caches the app shell so it works offline.
 
-const CACHE = 'tracker-v2';
+const CACHE = 'toodledoo-v3';
 const ASSETS = [
   './',
   './index.html',

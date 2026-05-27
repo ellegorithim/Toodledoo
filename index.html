@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#ff6fa3" />
-  <title>Tracker</title>
+  <title>Toodledoo</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Tracker" />
+  <meta name="apple-mobile-web-app-title" content="Toodledoo" />
   <link rel="stylesheet" href="styles.css" />
   <!-- QR code libs (cached by service worker after first load) -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
@@ -18,7 +18,7 @@
 </head>
 <body>
   <header class="app-header">
-    <h1 class="app-title">My Trackers</h1>
+    <h1 class="app-title">Toodledoo</h1>
     <nav class="nav">
       <button class="nav-btn active" data-view="dashboard">Home</button>
       <button class="nav-btn" data-view="add">Add</button>
@@ -47,8 +47,8 @@
       <div id="tracker-list" class="tracker-list"></div>
 
       <div id="empty-state" class="empty-state hidden">
-        <p>No trackers yet.</p>
-        <button class="btn primary" data-goto="add">Create your first tracker</button>
+        <p>No goals yet.</p>
+        <button class="btn primary" data-goto="add">Create your first goal</button>
       </div>
 
       <div id="recent-badges" class="recent-badges hidden">
@@ -60,7 +60,7 @@
     <!-- ADD / EDIT VIEW -->
     <section id="view-add" class="view">
       <div class="card form-card">
-        <h2 id="form-title">New Tracker</h2>
+        <h2 id="form-title">New Goal</h2>
         <form id="tracker-form">
           <input type="hidden" id="tracker-id" />
 

@@ -1,6 +1,6 @@
-# Tracker App
+# Toodledoo
 
-A pink-themed personal habit tracker with badges, local "monthly challenges with friends" (via share codes), and PWA install support.
+Toodledoo is a goal-tracking app that makes your to-do list feel less like a chore. Set daily goals, log your progress, earn badges, and take on challenges — because getting things done should feel like a win, not a guilt trip.
 
 ## Features
 
@@ -47,6 +47,8 @@ This gives you a real `https://yourname.github.io/tracker-app/` URL you can shar
 5. Under "Build and deployment", set **Source = Deploy from a branch**, **Branch = main**, **Folder = /(root)**, then Save.
 6. Wait ~1 minute. Your app is live at **https://ellegortithim.github.io/tracker-app/**.
 
+> Note: the GitHub repo is named `tracker-app` since that's what was created first. The app itself is branded **Toodledoo** everywhere users see it. You can rename the repo on GitHub later via Settings → Rename if you want the URL to be `/toodledoo/` instead.
+
 ### Future updates
 
 ```bash
@@ -86,7 +88,7 @@ When you're ready to publish to app stores, use **Capacitor** to wrap this exist
 # In ~/tracker-app
 npm init -y
 npm install @capacitor/core @capacitor/cli
-npx cap init Tracker com.yourname.tracker --web-dir .
+npx cap init Toodledoo com.yourname.toodledoo --web-dir .
 npm install @capacitor/ios @capacitor/android
 npx cap add ios
 npx cap add android
@@ -102,19 +104,19 @@ The app currently uses local-only mode (no accounts). To enable real accounts an
 
 ### 1. Create a Firebase project
 1. Go to https://console.firebase.google.com
-2. Sign in with Google → **Add project** → name it `tracker-app` → continue → disable Analytics (or enable, your choice) → Create.
+2. Sign in with Google → **Add project** → name it `toodledoo` → continue → disable Analytics (or enable, your choice) → Create.
 
 ### 2. Add a Web App to the project
 1. On the project Overview page, click the **`</>`** (web) icon.
-2. App nickname: `Tracker Web` → **Register app**.
+2. App nickname: `Toodledoo Web` → **Register app**.
 3. Firebase shows you a config object. Copy the values into `firebase-config.js` in this folder:
 
    ```js
    window.FIREBASE_CONFIG = {
      apiKey: 'AIza...',
-     authDomain: 'tracker-app-xxxx.firebaseapp.com',
-     projectId: 'tracker-app-xxxx',
-     storageBucket: 'tracker-app-xxxx.appspot.com',
+     authDomain: 'toodledoo-xxxx.firebaseapp.com',
+     projectId: 'toodledoo-xxxx',
+     storageBucket: 'toodledoo-xxxx.appspot.com',
      messagingSenderId: '1234567890',
      appId: '1:1234567890:web:abc123',
    };
