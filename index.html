@@ -107,9 +107,9 @@
     <!-- CHALLENGES VIEW -->
     <section id="view-challenges" class="view">
 
-      <!-- FRIENDS PANEL -->
+      <!-- FRIENDS + GLOBAL LEADERBOARD PANEL -->
       <div class="card">
-        <h2>Friends</h2>
+        <h2>Friends &amp; Leaderboard</h2>
         <p class="muted">Add friends by username or by scanning their QR code. Tap a friend to invite them to a challenge.</p>
 
         <div class="friend-add-row">
@@ -121,6 +121,11 @@
 
         <div id="friends-list" class="friends-list"></div>
         <p id="no-friends" class="muted hidden">No friends yet. Tap "My QR" to share your code with a friend.</p>
+
+        <h3>Global Standings</h3>
+        <p class="muted">Average completion across all your active challenges.</p>
+        <div id="global-leaderboard" class="leaderboard"></div>
+        <p id="no-global-board" class="muted hidden">No active challenges yet — create or join one below to see standings.</p>
       </div>
 
       <!-- CHALLENGES PANEL -->

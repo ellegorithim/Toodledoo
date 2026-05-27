@@ -523,27 +523,28 @@ function renderChallenges() {
   const none = document.getElementById('no-challenges');
   if (state.challenges.length === 0) {
     none.classList.remove('hidden');
-    return;
-  }
-  none.classList.add('hidden');
+  } else {
+    none.classList.add('hidden');
 
-  state.challenges
-    .slice()
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .forEach((c) => {
-      const pct = Math.min(100, (c.myTotal / c.target) * 100);
-      const card = document.createElement('div');
-      card.className = 'challenge-card';
-      card.dataset.id = c.id;
-      card.innerHTML = `
-        <h4>${escapeHtml(c.name)}</h4>
-        <p class="meta">${escapeHtml(c.start)} → ${escapeHtml(c.end)} • Goal: ${formatNum(c.target)} ${escapeHtml(c.unit)}</p>
-        <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
-        <p class="meta" style="margin-top:6px">You: ${formatNum(c.myTotal)} / ${formatNum(c.target)} • ${Object.keys(c.participants).length + 1} participants</p>
-      `;
-      card.addEventListener('click', () => openChallengeDetail(c.id));
-      list.appendChild(card);
-    });
+    state.challenges
+      .slice()
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .forEach((c) => {
+        const pct = Math.min(100, (c.myTotal / c.target) * 100);
+        const card = document.createElement('div');
+        card.className = 'challenge-card';
+        card.dataset.id = c.id;
+        card.innerHTML = `
+          <h4>${escapeHtml(c.name)}</h4>
+          <p class="meta">${escapeHtml(c.start)} → ${escapeHtml(c.end)} • Goal: ${formatNum(c.target)} ${escapeHtml(c.unit)}</p>
+          <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <p class="meta" style="margin-top:6px">You: ${formatNum(c.myTotal)} / ${formatNum(c.target)} • ${Object.keys(c.participants).length + 1} participants</p>
+        `;
+        card.addEventListener('click', () => openChallengeDetail(c.id));
+        list.appendChild(card);
+      });
+  }
+  renderGlobalLeaderboard();
 }
 
 function openChallengeDetail(id) {
@@ -803,25 +804,83 @@ function renderFriends() {
   list.innerHTML = '';
   if (state.friends.length === 0) {
     none.classList.remove('hidden');
+  } else {
+    none.classList.add('hidden');
+    state.friends
+      .slice()
+      .sort((a, b) => b.addedAt - a.addedAt)
+      .forEach((f) => {
+        const row = document.createElement('div');
+        row.className = 'friend-row';
+        const initial = (f.username || '?').slice(0, 1).toUpperCase();
+        row.innerHTML = `
+          <div class="friend-avatar">${escapeHtml(initial)}</div>
+          <span class="friend-name">${escapeHtml(f.username)}</span>
+          <button class="btn primary" data-friend-act="invite" data-name="${escapeHtml(f.username)}">Invite</button>
+          <button class="btn danger" data-friend-act="remove" data-name="${escapeHtml(f.username)}">Remove</button>
+        `;
+        list.appendChild(row);
+      });
+  }
+  renderGlobalLeaderboard();
+}
+
+function renderGlobalLeaderboard() {
+  const board = document.getElementById('global-leaderboard');
+  const none = document.getElementById('no-global-board');
+  if (!board) return;
+  board.innerHTML = '';
+
+  const active = state.challenges.filter((c) => {
+    const today = todayKey();
+    return c.end >= today;
+  });
+
+  if (active.length === 0) {
+    none.classList.remove('hidden');
     return;
   }
   none.classList.add('hidden');
 
-  state.friends
-    .slice()
-    .sort((a, b) => b.addedAt - a.addedAt)
-    .forEach((f) => {
-      const row = document.createElement('div');
-      row.className = 'friend-row';
-      const initial = (f.username || '?').slice(0, 1).toUpperCase();
-      row.innerHTML = `
-        <div class="friend-avatar">${escapeHtml(initial)}</div>
-        <span class="friend-name">${escapeHtml(f.username)}</span>
-        <button class="btn primary" data-friend-act="invite" data-name="${escapeHtml(f.username)}">Invite</button>
-        <button class="btn danger" data-friend-act="remove" data-name="${escapeHtml(f.username)}">Remove</button>
-      `;
-      list.appendChild(row);
+  // Aggregate average completion % across active challenges, per participant
+  const totals = {}; // name -> { sumPct, count, you }
+  const myName = state.profile.username || 'You';
+
+  active.forEach((c) => {
+    const target = c.target || 1;
+    const myPct = Math.min(100, ((c.myTotal || 0) / target) * 100);
+    if (!totals[myName]) totals[myName] = { sumPct: 0, count: 0, you: true };
+    totals[myName].sumPct += myPct;
+    totals[myName].count += 1;
+
+    Object.entries(c.participants || {}).forEach(([name, total]) => {
+      const pct = Math.min(100, (total / target) * 100);
+      if (!totals[name]) totals[name] = { sumPct: 0, count: 0, you: false };
+      totals[name].sumPct += pct;
+      totals[name].count += 1;
     });
+  });
+
+  const rows = Object.entries(totals)
+    .map(([name, t]) => ({
+      name,
+      avg: t.sumPct / t.count,
+      count: t.count,
+      you: t.you,
+    }))
+    .sort((a, b) => b.avg - a.avg);
+
+  rows.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'leaderboard-row ' + (r.you ? 'you' : '');
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    row.innerHTML = `
+      <span class="leaderboard-rank ${rankClass}">#${i + 1}</span>
+      <span class="leaderboard-name">${escapeHtml(r.name)}${r.you ? ' (you)' : ''}</span>
+      <span class="leaderboard-total">${Math.round(r.avg)}% · ${r.count} ${r.count === 1 ? 'challenge' : 'challenges'}</span>
+    `;
+    board.appendChild(row);
+  });
 }
 
 function addFriend(username) {
