@@ -39,18 +39,13 @@ This gives you a real `https://yourname.github.io/tracker-app/` URL you can shar
 
    ```bash
    cd ~/tracker-app
-   git init
-   git add .
-   git commit -m "Initial tracker app"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/tracker-app.git
    git push -u origin main
    ```
 
-   Replace `YOUR_USERNAME` with your GitHub username.
-4. On the repo page on github.com, click **Settings → Pages**.
+   (`git init`, `git add`, `git commit`, and `git remote add origin https://github.com/ellegortithim/tracker-app.git` have already been done.) When prompted for password, paste a **Personal Access Token** from https://github.com/settings/tokens (Generate new (classic) → check `repo` scope → copy the token → use it as the password).
+4. On the repo page, click **Settings → Pages**.
 5. Under "Build and deployment", set **Source = Deploy from a branch**, **Branch = main**, **Folder = /(root)**, then Save.
-6. Wait ~1 minute. Your app is live at `https://YOUR_USERNAME.github.io/tracker-app/`.
+6. Wait ~1 minute. Your app is live at **https://ellegortithim.github.io/tracker-app/**.
 
 ### Future updates
 
@@ -101,24 +96,81 @@ npx cap open android # Requires Android Studio
 
 From there you build and submit to the stores. Apple Developer = $99/yr, Google Play = $25 one-time.
 
-## Upgrading to Real Cloud Sync (real friends, real-time)
+## Setting Up Firebase (for real accounts + cross-device friends)
 
-Two free-tier options:
+The app currently uses local-only mode (no accounts). To enable real accounts and live friend syncing, follow these steps. **You** must do steps 1–6; I cannot create accounts or projects on your behalf.
 
-- **Firebase** (firebase.google.com) — NoSQL Firestore + built-in Google/email auth. Easier for live updates.
-- **Supabase** (supabase.com) — open-source Postgres + auth. Easier if you like SQL.
+### 1. Create a Firebase project
+1. Go to https://console.firebase.google.com
+2. Sign in with Google → **Add project** → name it `tracker-app` → continue → disable Analytics (or enable, your choice) → Create.
 
-Both require: create project, copy the config snippet, and replace the localStorage calls in `script.js` with calls to their SDK. Roughly 100–200 lines of code to wire up.
+### 2. Add a Web App to the project
+1. On the project Overview page, click the **`</>`** (web) icon.
+2. App nickname: `Tracker Web` → **Register app**.
+3. Firebase shows you a config object. Copy the values into `firebase-config.js` in this folder:
+
+   ```js
+   window.FIREBASE_CONFIG = {
+     apiKey: 'AIza...',
+     authDomain: 'tracker-app-xxxx.firebaseapp.com',
+     projectId: 'tracker-app-xxxx',
+     storageBucket: 'tracker-app-xxxx.appspot.com',
+     messagingSenderId: '1234567890',
+     appId: '1:1234567890:web:abc123',
+   };
+   ```
+
+### 3. Enable Authentication
+1. In Firebase Console → **Build → Authentication → Get started**.
+2. Click **Sign-in method** tab → enable **Email/Password** (and **Google** if you want one-tap login).
+
+### 4. Create the Firestore database
+1. **Build → Firestore Database → Create database** → Start in **production mode** → pick a region close to you → Enable.
+2. Go to the **Rules** tab and paste:
+
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /users/{userId} {
+         allow read: if request.auth != null;
+         allow write: if request.auth != null && request.auth.uid == userId;
+       }
+       match /challenges/{challengeId} {
+         allow read, write: if request.auth != null;
+       }
+     }
+   }
+   ```
+
+3. Publish.
+
+### 5. Add your domain to authorized domains
+- Authentication → Settings → Authorized domains → Add `ellegortithim.github.io`.
+
+### 6. Tell me you're done
+Once you've completed steps 1–5 and pasted your config into `firebase-config.js`, ask me to "wire up Firebase" and I'll add:
+- Login / signup screen
+- Real username uniqueness check
+- Friend requests (send / accept / reject)
+- Cross-device challenge sync
+- Live leaderboards that update without re-pasting codes
+
+Until then, the app works fully in local mode with QR-code-based friend adding and challenge sharing.
+
+### Alternative: Supabase
+If you prefer SQL/Postgres, https://supabase.com is the equivalent. Same general flow but uses Postgres instead of Firestore. I can wire that up too if you'd rather.
 
 ## File Structure
 
 ```
 tracker-app/
-├── index.html      # Page structure
-├── styles.css      # Styling, animations, responsive
-├── script.js       # All app logic, state, badges, challenges
-├── manifest.json   # PWA manifest
-├── sw.js           # Service worker (offline caching)
-├── icon.svg        # App icon
-└── README.md       # This file
+├── index.html          # Page structure
+├── styles.css          # Styling, animations, responsive
+├── script.js           # All app logic, state, badges, challenges, QR
+├── manifest.json       # PWA manifest
+├── sw.js               # Service worker (offline caching)
+├── icon.svg            # App icon
+├── firebase-config.js  # Placeholder for Firebase config (real accounts opt-in)
+└── README.md           # This file
 ```

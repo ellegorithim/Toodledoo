@@ -1,7 +1,7 @@
 // Service worker for Tracker PWA
 // Caches the app shell so it works offline.
 
-const CACHE = 'tracker-v1';
+const CACHE = 'tracker-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -28,11 +28,15 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  // Cache same-origin assets AND the QR libs from jsdelivr
+  const cacheable =
+    url.origin === location.origin || url.host === 'cdn.jsdelivr.net';
   e.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req)
         .then((res) => {
-          if (res && res.ok && new URL(req.url).origin === location.origin) {
+          if (res && res.ok && cacheable) {
             const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(req, copy));
           }

@@ -49,9 +49,11 @@ function loadState() {
         trackers: parsed.trackers || [],
         theme: { ...DEFAULT_THEME, ...(parsed.theme || {}) },
         notifGranted: parsed.notifGranted || false,
-        badges: parsed.badges || {}, // { badgeId: timestamp }
+        badges: parsed.badges || {},
         stats: parsed.stats || { totalGoalHits: 0 },
         challenges: parsed.challenges || [],
+        profile: parsed.profile || { username: '', id: uid() },
+        friends: parsed.friends || [], // [{ username, addedAt }]
       };
     }
   } catch (_) {}
@@ -62,6 +64,8 @@ function loadState() {
     badges: {},
     stats: { totalGoalHits: 0 },
     challenges: [],
+    profile: { username: '', id: uid() },
+    friends: [],
   };
 }
 
@@ -558,9 +562,12 @@ function openChallengeDetail(id) {
 
     <div class="form-actions" style="margin-top:14px; flex-wrap:wrap">
       <button class="btn primary" data-ch-act="add">+ Add to My Total</button>
-      <button class="btn ghost" data-ch-act="invite">Share Invite Code</button>
-      <button class="btn ghost" data-ch-act="result">Send My Result</button>
-      <button class="btn ghost" data-ch-act="paste">Paste Friend's Result</button>
+      <button class="btn ghost" data-ch-act="invite-qr">🔳 Invite QR</button>
+      <button class="btn ghost" data-ch-act="invite">Invite Code</button>
+      <button class="btn ghost" data-ch-act="result-qr">🔳 My Result QR</button>
+      <button class="btn ghost" data-ch-act="result">Result Code</button>
+      <button class="btn ghost" data-ch-act="scan">📷 Scan Result</button>
+      <button class="btn ghost" data-ch-act="paste">Paste Result</button>
       <button class="btn danger" data-ch-act="delete">Delete</button>
     </div>
 
@@ -588,7 +595,10 @@ function openChallengeDetail(id) {
       const a = btn.dataset.chAct;
       if (a === 'add') addToChallenge(id);
       else if (a === 'invite') shareInviteCode(id);
+      else if (a === 'invite-qr') showChallengeInviteQR(id);
       else if (a === 'result') shareResultCode(id);
+      else if (a === 'result-qr') showResultQR(id);
+      else if (a === 'scan') openScanner(handleScannedCode);
       else if (a === 'paste') pasteFriendResult(id);
       else if (a === 'delete') deleteChallenge(id);
     });
@@ -786,6 +796,272 @@ function closeCodeModal() {
   document.getElementById('code-modal').classList.add('hidden');
 }
 
+// ---------- Friends ----------
+function renderFriends() {
+  const list = document.getElementById('friends-list');
+  const none = document.getElementById('no-friends');
+  list.innerHTML = '';
+  if (state.friends.length === 0) {
+    none.classList.remove('hidden');
+    return;
+  }
+  none.classList.add('hidden');
+
+  state.friends
+    .slice()
+    .sort((a, b) => b.addedAt - a.addedAt)
+    .forEach((f) => {
+      const row = document.createElement('div');
+      row.className = 'friend-row';
+      const initial = (f.username || '?').slice(0, 1).toUpperCase();
+      row.innerHTML = `
+        <div class="friend-avatar">${escapeHtml(initial)}</div>
+        <span class="friend-name">${escapeHtml(f.username)}</span>
+        <button class="btn primary" data-friend-act="invite" data-name="${escapeHtml(f.username)}">Invite</button>
+        <button class="btn danger" data-friend-act="remove" data-name="${escapeHtml(f.username)}">Remove</button>
+      `;
+      list.appendChild(row);
+    });
+}
+
+function addFriend(username) {
+  username = (username || '').trim();
+  if (!username) return false;
+  if (username.toLowerCase() === (state.profile.username || '').toLowerCase()) {
+    alert("That's your own username.");
+    return false;
+  }
+  if (state.friends.some((f) => f.username.toLowerCase() === username.toLowerCase())) {
+    alert(`${username} is already in your friends list.`);
+    return false;
+  }
+  state.friends.push({ username, addedAt: Date.now() });
+  saveState();
+  renderFriends();
+  return true;
+}
+
+function removeFriend(username) {
+  if (!confirm(`Remove ${username} from friends?`)) return;
+  state.friends = state.friends.filter(
+    (f) => f.username.toLowerCase() !== username.toLowerCase()
+  );
+  saveState();
+  renderFriends();
+}
+
+function inviteFriendToChallenge(username) {
+  if (state.challenges.length === 0) {
+    alert('Create a challenge first.');
+    return;
+  }
+  const choices = state.challenges
+    .map((c, i) => `${i + 1}. ${c.name}`)
+    .join('\n');
+  const pick = prompt(`Which challenge to invite ${username} to?\n\n${choices}\n\nEnter number:`);
+  const idx = parseInt(pick, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= state.challenges.length) return;
+  shareInviteCode(state.challenges[idx].id);
+}
+
+// ---------- QR Code ----------
+function showQRModal({ title, desc, text }) {
+  const modal = document.getElementById('qr-modal');
+  document.getElementById('qr-modal-title').textContent = title;
+  document.getElementById('qr-modal-desc').textContent = desc;
+  document.getElementById('qr-text-fallback').value = text;
+  const canvas = document.getElementById('qr-canvas');
+
+  if (window.QRCode && typeof window.QRCode.toCanvas === 'function') {
+    window.QRCode.toCanvas(
+      canvas,
+      text,
+      { width: 280, margin: 1, color: { dark: state.theme.accent1, light: '#ffffff' } },
+      (err) => {
+        if (err) console.warn('QR generation failed:', err);
+      }
+    );
+  } else {
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeQRModal() {
+  document.getElementById('qr-modal').classList.add('hidden');
+}
+
+function showMyQR() {
+  const username = state.profile.username || '';
+  if (!username) {
+    alert('Set a username first in Settings → Profile.');
+    showView('settings');
+    return;
+  }
+  const payload = { type: 'friend', username };
+  const text = encode(payload);
+  showQRModal({
+    title: 'Your Friend QR',
+    desc: `Have a friend scan this to add you (${username}) as a friend.`,
+    text,
+  });
+}
+
+function showChallengeInviteQR(challengeId) {
+  const c = state.challenges.find((x) => x.id === challengeId);
+  if (!c) return;
+  const payload = {
+    type: 'invite',
+    id: c.id,
+    name: c.name,
+    unit: c.unit,
+    target: c.target,
+    start: c.start,
+    end: c.end,
+    from: c.username,
+  };
+  const text = encode(payload);
+  showQRModal({
+    title: 'Invite QR',
+    desc: `Friends scan this to join "${c.name}".`,
+    text,
+  });
+}
+
+function showResultQR(challengeId) {
+  const c = state.challenges.find((x) => x.id === challengeId);
+  if (!c) return;
+  const payload = { type: 'result', id: c.id, name: c.username || 'Anon', total: c.myTotal };
+  const text = encode(payload);
+  showQRModal({
+    title: 'Your Result QR',
+    desc: `Have the challenge host scan this to add your score to the leaderboard.`,
+    text,
+  });
+}
+
+// ---------- QR Scanner ----------
+let scanStream = null;
+let scanRAF = null;
+let scanContext = null;
+
+async function openScanner(onCode) {
+  const modal = document.getElementById('scan-modal');
+  const video = document.getElementById('scan-video');
+  const canvas = document.getElementById('scan-canvas');
+  const status = document.getElementById('scan-status');
+  status.textContent = '';
+
+  modal.classList.remove('hidden');
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    status.textContent = 'This browser does not support camera access.';
+    return;
+  }
+  if (!window.jsQR) {
+    status.textContent = 'QR scanner library failed to load. Check your internet on first run.';
+    return;
+  }
+
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' },
+    });
+  } catch (err) {
+    status.textContent = 'Camera permission denied or unavailable.';
+    return;
+  }
+
+  video.srcObject = scanStream;
+  video.setAttribute('playsinline', 'true');
+  await video.play();
+
+  scanContext = canvas.getContext('2d', { willReadFrequently: true });
+
+  const tick = () => {
+    if (!scanStream) return;
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      scanRAF = requestAnimationFrame(tick);
+      return;
+    }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    scanContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = scanContext.getImageData(0, 0, canvas.width, canvas.height);
+    const code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'dontInvert',
+    });
+    if (code && code.data) {
+      closeScanner();
+      onCode(code.data);
+      return;
+    }
+    scanRAF = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function closeScanner() {
+  if (scanRAF) cancelAnimationFrame(scanRAF);
+  scanRAF = null;
+  if (scanStream) {
+    scanStream.getTracks().forEach((t) => t.stop());
+    scanStream = null;
+  }
+  document.getElementById('scan-modal').classList.add('hidden');
+}
+
+function handleScannedCode(raw) {
+  try {
+    const data = decode(raw);
+    if (data.type === 'friend') {
+      if (addFriend(data.username)) {
+        alert(`Added ${data.username} to your friends.`);
+      }
+    } else if (data.type === 'invite') {
+      // Join challenge
+      if (state.challenges.some((c) => c.id === data.id)) {
+        alert('You already joined this challenge.');
+        return;
+      }
+      const name = state.profile.username || prompt('Your display name:');
+      if (!name) return;
+      state.challenges.push({
+        id: data.id,
+        name: data.name,
+        username: name.trim(),
+        unit: data.unit,
+        target: data.target,
+        start: data.start,
+        end: data.end,
+        myTotal: 0,
+        participants: data.from ? { [data.from]: 0 } : {},
+        createdAt: Date.now(),
+      });
+      saveState();
+      evaluateBadges();
+      renderChallenges();
+      alert(`Joined "${data.name}"!`);
+    } else if (data.type === 'result') {
+      const c = state.challenges.find((x) => x.id === data.id);
+      if (!c) {
+        alert("You haven't joined this challenge.");
+        return;
+      }
+      c.participants[data.name] = data.total;
+      saveState();
+      evaluateBadges();
+      renderChallenges();
+      alert(`Added ${data.name}'s result (${data.total}).`);
+    } else {
+      alert('Unrecognized QR code.');
+    }
+  } catch (_) {
+    alert('Could not read QR code.');
+  }
+}
+
 // ---------- Settings ----------
 function bindSettings() {
   const mainEl = document.getElementById('color-main');
@@ -886,6 +1162,14 @@ function bindSettings() {
       });
   };
 
+  // Profile username
+  const userEl = document.getElementById('profile-username');
+  userEl.value = state.profile.username || '';
+  userEl.addEventListener('input', (e) => {
+    state.profile.username = e.target.value.trim().slice(0, 20);
+    saveState();
+  });
+
   // PWA Install
   const installBtn = document.getElementById('install-btn');
   installBtn.addEventListener('click', async () => {
@@ -927,7 +1211,7 @@ function bindEvents() {
       const v = btn.dataset.view;
       if (v === 'add') openAddForm();
       else if (v === 'badges') { renderBadges(); showView('badges'); }
-      else if (v === 'challenges') { renderChallenges(); showView('challenges'); }
+      else if (v === 'challenges') { renderChallenges(); renderFriends(); showView('challenges'); }
       else showView(v);
     });
   });
@@ -936,7 +1220,7 @@ function bindEvents() {
     el.addEventListener('click', () => {
       const v = el.dataset.goto;
       if (v === 'add') openAddForm();
-      else if (v === 'challenges') { renderChallenges(); showView('challenges'); }
+      else if (v === 'challenges') { renderChallenges(); renderFriends(); showView('challenges'); }
       else showView(v);
     });
   });
@@ -967,9 +1251,50 @@ function bindEvents() {
   // Challenges
   document.getElementById('new-challenge-btn').addEventListener('click', openNewChallengeForm);
   document.getElementById('join-challenge-btn').addEventListener('click', joinViaCode);
+  document.getElementById('scan-join-btn').addEventListener('click', () =>
+    openScanner(handleScannedCode)
+  );
   document.getElementById('paste-result-btn').addEventListener('click', () => pasteFriendResult(null));
   document.getElementById('challenge-form').addEventListener('submit', handleChallengeFormSubmit);
   document.getElementById('cancel-challenge').addEventListener('click', () => showView('challenges'));
+
+  // Friends
+  document.getElementById('add-friend-btn').addEventListener('click', () => {
+    const input = document.getElementById('friend-username-input');
+    if (addFriend(input.value)) input.value = '';
+  });
+  document.getElementById('friend-username-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('add-friend-btn').click();
+  });
+  document.getElementById('scan-friend-btn').addEventListener('click', () =>
+    openScanner(handleScannedCode)
+  );
+  document.getElementById('my-qr-btn').addEventListener('click', showMyQR);
+
+  document.getElementById('friends-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-friend-act]');
+    if (!btn) return;
+    const name = btn.dataset.name;
+    if (btn.dataset.friendAct === 'invite') inviteFriendToChallenge(name);
+    else if (btn.dataset.friendAct === 'remove') removeFriend(name);
+  });
+
+  // QR modal
+  document.getElementById('qr-close-btn').addEventListener('click', closeQRModal);
+  document.getElementById('qr-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'qr-modal') closeQRModal();
+  });
+  document.getElementById('qr-copy-btn').addEventListener('click', () => {
+    const txt = document.getElementById('qr-text-fallback').value;
+    navigator.clipboard?.writeText(txt).then(() => {
+      const b = document.getElementById('qr-copy-btn');
+      b.textContent = 'Copied!';
+      setTimeout(() => (b.textContent = 'Copy Text'), 1500);
+    });
+  });
+
+  // Scanner modal
+  document.getElementById('scan-cancel').addEventListener('click', closeScanner);
 
   // Code modal
   document.getElementById('code-modal-cancel').addEventListener('click', closeCodeModal);
@@ -998,6 +1323,7 @@ function init() {
 
   renderTrackers();
   renderChallenges();
+  renderFriends();
   renderBadges();
   showView('dashboard');
 

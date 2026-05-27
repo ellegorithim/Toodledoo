@@ -12,6 +12,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Tracker" />
   <link rel="stylesheet" href="styles.css" />
+  <!-- QR code libs (cached by service worker after first load) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
 </head>
 <body>
   <header class="app-header">
@@ -103,14 +106,33 @@
 
     <!-- CHALLENGES VIEW -->
     <section id="view-challenges" class="view">
+
+      <!-- FRIENDS PANEL -->
+      <div class="card">
+        <h2>Friends</h2>
+        <p class="muted">Add friends by username or by scanning their QR code. Tap a friend to invite them to a challenge.</p>
+
+        <div class="friend-add-row">
+          <input type="text" id="friend-username-input" maxlength="20" placeholder="Friend's username" />
+          <button class="btn primary" id="add-friend-btn">Add</button>
+          <button class="btn ghost" id="scan-friend-btn" title="Scan QR">📷 Scan</button>
+          <button class="btn ghost" id="my-qr-btn" title="Show my QR">🔳 My QR</button>
+        </div>
+
+        <div id="friends-list" class="friends-list"></div>
+        <p id="no-friends" class="muted hidden">No friends yet. Tap "My QR" to share your code with a friend.</p>
+      </div>
+
+      <!-- CHALLENGES PANEL -->
       <div class="card">
         <h2>Monthly Challenges</h2>
-        <p class="muted">Challenge friends without a server. Create a challenge → share the invite code. They paste it into their app, log their progress, and send their result code back. Paste their codes here to see the leaderboard.</p>
+        <p class="muted">Create a challenge → share via QR or code. Friends join, log progress, send results back. Leaderboard updates as you paste/scan each result.</p>
 
         <div class="form-actions">
           <button class="btn primary" id="new-challenge-btn">+ New Challenge</button>
           <button class="btn ghost" id="join-challenge-btn">Join via Code</button>
-          <button class="btn ghost" id="paste-result-btn">Paste Friend's Result</button>
+          <button class="btn ghost" id="scan-join-btn">📷 Scan Invite</button>
+          <button class="btn ghost" id="paste-result-btn">Paste Result</button>
         </div>
 
         <div id="challenge-list" class="challenge-list"></div>
@@ -183,6 +205,13 @@
     <section id="view-settings" class="view">
       <div class="card">
         <h2>Settings</h2>
+
+        <h3>Profile</h3>
+        <label class="setting-label">
+          Username
+          <input type="text" id="profile-username" maxlength="20" placeholder="Pick a handle" />
+        </label>
+        <p class="muted">Used on challenge leaderboards and shown to friends. Local only for now.</p>
 
         <h3>Theme Colors</h3>
         <div class="color-row">
@@ -259,6 +288,39 @@
       <div class="form-actions">
         <button class="btn primary" id="code-modal-action">Copy</button>
         <button class="btn ghost" id="code-modal-cancel">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR DISPLAY MODAL -->
+  <div id="qr-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3 id="qr-modal-title">QR Code</h3>
+      <p id="qr-modal-desc" class="muted"></p>
+      <div class="qr-canvas-wrap">
+        <canvas id="qr-canvas"></canvas>
+      </div>
+      <p class="muted qr-fallback-label">Or share the text:</p>
+      <textarea id="qr-text-fallback" rows="3" readonly></textarea>
+      <div class="form-actions">
+        <button class="btn primary" id="qr-copy-btn">Copy Text</button>
+        <button class="btn ghost" id="qr-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR SCANNER MODAL -->
+  <div id="scan-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Scan QR Code</h3>
+      <p class="muted" id="scan-help">Point your camera at a friend's QR code.</p>
+      <div class="scanner-wrap">
+        <video id="scan-video" playsinline></video>
+        <canvas id="scan-canvas" hidden></canvas>
+      </div>
+      <p id="scan-status" class="muted"></p>
+      <div class="form-actions">
+        <button class="btn ghost" id="scan-cancel">Cancel</button>
       </div>
     </div>
   </div>
